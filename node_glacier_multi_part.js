@@ -2,11 +2,11 @@ var AWS = require('aws-sdk');
 var creds = require('/home/yotta/.aws')
 var fs =  require('fs');
 var encoding = "utf8";
-var buffer = fs.readFileSync(filePath);
 var partSize = 1024 * 1024; // 1MB chunks,
 var numPartsLeft = Math.ceil(buffer.length / partSize);
 var startTime = new Date();
 var byteIncrementer = 0;
+var MBcounter = 0;
 var multipart;
 
 //move these out to args
@@ -25,6 +25,8 @@ var params = {
   archiveDescription: archiveDescription,
   partSize: partSize.toString(),
 };
+
+var buffer = fs.readFileSync(filePath);
 var glacier = new AWS.Glacier(myConfig)
 var treeHash = glacier.computeChecksums(buffer).treeHash;
 
@@ -61,9 +63,11 @@ function recursivelyUploadPart() {
             console.log("Completed part", this.request.params.range);
 
             if (--numPartsLeft > 0) {
+                MBcounter++;
+                console.log("MB Uploaded: ", MBcounter);
                 byteIncrementer += partSize;
-                console.log('recursing')
-                return recursivelyUploadPart(byteIncrementer)
+                console.log('recursing');
+                return recursivelyUploadPart(byteIncrementer);
             } else {
                 var doneParams = {
                     vaultName: params.vaultName,
@@ -72,7 +76,7 @@ function recursivelyUploadPart() {
                     checksum: treeHash // the computed tree hash
                 };
                 console.log("Completing upload...");
-                resolve(glacier.completeMultipartUpload(doneParams, function(err, data) {
+                glacier.completeMultipartUpload(doneParams, function(err, data) {
                     if (err) {
                         console.log("An error occurred while uploading the archive: ", err);
                     } else {
@@ -81,7 +85,7 @@ function recursivelyUploadPart() {
                         console.log('Archive ID:', data.archiveId);
                         console.log('Checksum:  ', data.checksum);
                     }
-                }));
+                });
             }
         }
     });
