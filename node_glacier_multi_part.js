@@ -68,9 +68,16 @@ new Promise(function (resolve, reject) {
     }
 }).then(function () {
     console.log("total upload size: ", buffer.length);
+
     recursivelyUploadPart(byteIncrementer)
 
 }).catch(function (err) {console.log(err)});
+
+function startUploads(num) {
+    while (i < num) {
+        recursivelyUploadPart();
+    }
+};
 
 function recursivelyUploadPart() {
     var end = Math.min(byteIncrementer + partSize, buffer.length);
@@ -91,35 +98,44 @@ function recursivelyUploadPart() {
             return recursivelyUploadPart(byteIncrementer)
         } else {
             console.log("Completed part", this.request.params.range);
-
             if (--numPartsLeft > 0) {
-                MBcounter++;
-                console.log("MB Uploaded: ", MBcounter);
-                byteIncrementer += partSize;
-                console.log('recursing');
+                updateCounters();
                 return recursivelyUploadPart(byteIncrementer);
             } else {
-                var doneParams = {
-                    vaultName: params.vaultName,
-                    uploadId: multipart.uploadId,
-                    archiveSize: buffer.length.toString(),
-                    checksum: treeHash // the computed tree hash
-                };
-                console.log("Completing upload...");
-                glacier.completeMultipartUpload(doneParams, function(err, data) {
-                    if (err) {
-                        console.log("An error occurred while uploading the archive: ", err);
-                    } else {
-                        var delta = (new Date() - startTime) / 1000;
-                        console.log('Completed upload in', delta, 'seconds');
-                        console.log('Archive ID:', data.archiveId);
-                        console.log('Checksum:  ', data.checksum);
-                        console.log("==============================");
-                        console.log('COMPLETED');
-                        console.log("==============================");
-                    }
-                });
             }
+        }
+    });
+};
+
+// function createPartParams() {
+
+// };
+function updateCounters() {
+    MBcounter++;
+    console.log("MB Uploaded: ", MBcounter);
+    byteIncrementer += partSize;
+    console.log('recursing');
+};
+
+function completeUpload () {
+    var doneParams = {
+        vaultName: params.vaultName,
+        uploadId: multipart.uploadId,
+        archiveSize: buffer.length.toString(),
+        checksum: treeHash // the computed tree hash
+    };
+    console.log("Completing upload...");
+    glacier.completeMultipartUpload(doneParams, function(err, data) {
+        if (err) {
+            console.log("An error occurred while uploading the archive: ", err);
+        } else {
+            var delta = (new Date() - startTime) / 1000;
+            console.log('Completed upload in', delta, 'seconds');
+            console.log('Archive ID:', data.archiveId);
+            console.log('Checksum:  ', data.checksum);
+            console.log("==============================");
+            console.log('COMPLETED');
+            console.log("==============================");
         }
     });
 };
