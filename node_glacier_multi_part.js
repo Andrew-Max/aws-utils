@@ -1,18 +1,28 @@
+var minm = require('minimist');
+
+var argv = require('minimist')(process.argv.slice(2));
 var AWS = require('aws-sdk');
 var creds = require('/home/yotta/.aws')
 var fs =  require('fs');
 var encoding = "utf8";
 var partSize = 1024 * 1024; // 1MB chunks,
-var numPartsLeft = Math.ceil(buffer.length / partSize);
 var startTime = new Date();
 var byteIncrementer = 0;
 var MBcounter = 0;
 var multipart;
 
 //move these out to args
-var filePath = '/home/yotta/zips/pics/100.zip';
-var vaultName = 'amax-photo-storage';
-var archiveDescription = '100media'
+var filePath = argv.filepath;
+var vaultName = argv.vaultname || 'amax-photo-storage';
+var archiveDescription = argv.description
+
+if (!filePath) {
+    throw "ERROR: must pass file path via --filepath <filepath>"
+}
+
+if (!archiveDescription) {
+    throw "ERROR: must pass description path via --description <description>"
+}
 
 var myConfig = new AWS.Config({
   accessKeyId: creds.AccessKeyID,
@@ -27,6 +37,7 @@ var params = {
 };
 
 var buffer = fs.readFileSync(filePath);
+var numPartsLeft = Math.ceil(buffer.length / partSize);
 var glacier = new AWS.Glacier(myConfig)
 var treeHash = glacier.computeChecksums(buffer).treeHash;
 
