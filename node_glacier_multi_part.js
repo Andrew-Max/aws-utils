@@ -1,7 +1,6 @@
 var AWS = require('aws-sdk');
 var creds = require('/home/yotta/.aws')
 var fs =  require('fs');
-var filePath = '/home/yotta/zips/pics/100.zip';
 var encoding = "utf8";
 var buffer = fs.readFileSync(filePath);
 var partSize = 1024 * 1024; // 1MB chunks,
@@ -10,6 +9,11 @@ var startTime = new Date();
 var byteIncrementer = 0;
 var multipart;
 
+//move these out to args
+var filePath = '/home/yotta/zips/pics/100.zip';
+var vaultName = 'amax-photo-storage';
+var archiveDescription = '100media'
+
 var myConfig = new AWS.Config({
   accessKeyId: creds.AccessKeyID,
   secretAccessKey: creds.SecretAccessKey,
@@ -17,10 +21,8 @@ var myConfig = new AWS.Config({
 });
 var params = {
   accountId: '-',
-  // vaultName: 'amax-photos',
-  vaultName: 'amax-test',
-  archiveDescription: '100media',
-  archiveDescription: 'test',
+  vaultName: vaultName,
+  archiveDescription: archiveDescription,
   partSize: partSize.toString(),
 };
 var glacier = new AWS.Glacier(myConfig)
