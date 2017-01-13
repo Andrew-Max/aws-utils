@@ -66,9 +66,6 @@ function uploadPart() {
     uploadPart(partParams);
 };
 
-// function createPartParams() {
-
-// };
 function updateCounters() {
     MBcounter++;
     console.log("MB Uploaded: ", MBcounter);
