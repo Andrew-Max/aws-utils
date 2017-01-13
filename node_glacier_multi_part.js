@@ -42,15 +42,30 @@ var glacier = new AWS.Glacier(myConfig)
 var treeHash = glacier.computeChecksums(buffer).treeHash;
 
 new Promise(function (resolve, reject) {
-    glacier.initiateMultipartUpload(params, function (mpErr, multi) {
-        if (mpErr) { console.log('Error!', mpErr.stack); return; }
-        console.log("Got upload ID", multi.uploadId);
-        multipart = multi
+    //pass in upload id and byte starting place to resume a killed upload
+    if (argv.multi && argv.lastByte) {
+        byteIncrementer = argv.lastByte;
+        multipart = { uploadId: argv.multi }
+        MBcounter = byteIncrementer / (1024 * 1024)
+        console.log('used existing upload');
+        console.log('id: ', multipart.uploadId);
+        console.log('starting Byte: ', byteIncrementer);
+        console.log('starting MB: ', MBcounter);
+
         resolve();
-    });
+    //if no existing upload info, start new one
+    } else {
+        glacier.initiateMultipartUpload(params, function (mpErr, multi) {
+            if (mpErr) { console.log('Error!', mpErr.stack); return; }
+            console.log("Got upload ID", multi.uploadId);
+            multipart = multi
+            resolve();
+        });
+    }
 }).then(function () {
     console.log("total upload size: ", buffer.length);
     recursivelyUploadPart(byteIncrementer)
+
 }).catch(function (err) {console.log(err)});
 
 function recursivelyUploadPart() {
