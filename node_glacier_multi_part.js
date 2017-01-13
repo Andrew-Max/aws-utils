@@ -3,20 +3,18 @@ var creds = require('/home/yotta/.aws')
 var fs =  require('fs');
 var filePath = '/home/yotta/zips/pics/100.zip';
 var encoding = "utf8";
+var buffer = fs.readFileSync(filePath);
+var partSize = 1024 * 1024; // 1MB chunks,
+var numPartsLeft = Math.ceil(buffer.length / partSize);
+var startTime = new Date();
+var byteIncrementer = 0;
 var multipart;
+
 var myConfig = new AWS.Config({
   accessKeyId: creds.AccessKeyID,
   secretAccessKey: creds.SecretAccessKey,
   region: 'us-west-1'
 });
-var glacier = new AWS.Glacier(myConfig)
-var buffer = fs.readFileSync(filePath);
-// var buffer = new Buffer(25 * 1024 * 1024); // 2.5MB buffer
-var partSize = 1024 * 1024; // 1MB chunks,
-var numPartsLeft = Math.ceil(buffer.length / partSize);
-var startTime = new Date();
-var byteIncrementer = 0;
-
 var params = {
   accountId: '-',
   // vaultName: 'amax-photos',
@@ -25,7 +23,7 @@ var params = {
   archiveDescription: 'test',
   partSize: partSize.toString(),
 };
-
+var glacier = new AWS.Glacier(myConfig)
 var treeHash = glacier.computeChecksums(buffer).treeHash;
 
 new Promise(function (resolve, reject) {
