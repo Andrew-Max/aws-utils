@@ -44,33 +44,15 @@ var treeHash = glacier.computeChecksums(buffer).treeHash;
 new Promise(function (resolve, reject) {
     //pass in upload id and byte starting place to resume a killed upload
     if (argv.multi && argv.lastByte) {
-        byteIncrementer = argv.lastByte;
-        multipart = { uploadId: argv.multi }
-        MBcounter = byteIncrementer / (1024 * 1024)
-        console.log("===========================")
-        console.log('used existing upload');
-        console.log('id: ', multipart.uploadId);
-        console.log('starting Byte: ', byteIncrementer);
-        console.log('starting with MB completed: ', MBcounter);
-        console.log("===========================")
-
+        initializeForExistingUpload();
         resolve();
     //if no existing upload info, start new one
     } else {
-        glacier.initiateMultipartUpload(params, function (mpErr, multi) {
-            if (mpErr) { console.log('Error!', mpErr.stack); return; }
-            console.log("===========================")
-            conole.log("Initiated new upload with id: ",  multi.uploadId);
-            console.log("===========================")
-            multipart = multi
-            resolve();
-        });
+        initiateNewUpload();
     }
 }).then(function () {
     console.log("total upload size: ", buffer.length);
-
     recursivelyUploadPart(byteIncrementer)
-
 }).catch(function (err) {console.log(err)});
 
 function startUploads(num) {
@@ -79,32 +61,9 @@ function startUploads(num) {
     }
 };
 
-function recursivelyUploadPart() {
-    var end = Math.min(byteIncrementer + partSize, buffer.length);
-
-    var partParams = {
-        accountId: '-',
-        uploadId: multipart.uploadId,
-        vaultName: params.vaultName,
-        range: 'bytes ' + byteIncrementer + '-' + (end-1) + '/*',
-        body: buffer.slice(byteIncrementer, end)
-    };
-
-    console.log('Uploading part', byteIncrementer, '=', partParams.range);
-    glacier.uploadMultipartPart(partParams, function(multiErr, mData) {
-        if (multiErr) {
-            console.log('part upload error: ', multiErr)
-            console.log('retrying')
-            return recursivelyUploadPart(byteIncrementer)
-        } else {
-            console.log("Completed part", this.request.params.range);
-            if (--numPartsLeft > 0) {
-                updateCounters();
-                return recursivelyUploadPart(byteIncrementer);
-            } else {
-            }
-        }
-    });
+function uploadPart() {
+    var partParams = createPartParams();
+    uploadPart(partParams);
 };
 
 // function createPartParams() {
@@ -124,6 +83,7 @@ function completeUpload () {
         archiveSize: buffer.length.toString(),
         checksum: treeHash // the computed tree hash
     };
+
     console.log("Completing upload...");
     glacier.completeMultipartUpload(doneParams, function(err, data) {
         if (err) {
@@ -136,6 +96,60 @@ function completeUpload () {
             console.log("==============================");
             console.log('COMPLETED');
             console.log("==============================");
+        }
+    });
+};
+
+function initiateNewUpload() {
+    glacier.initiateMultipartUpload(params, function (mpErr, multi) {
+        if (mpErr) { console.log('Error!', mpErr.stack); return; }
+        console.log("===========================");
+        conole.log("Initiated new upload with id: ",  multi.uploadId);
+        console.log("===========================");
+        multipart = multi;
+        resolve();
+    });
+};
+
+function initializeForExistingUpload() {
+    byteIncrementer = argv.lastByte;
+    multipart = { uploadId: argv.multi }
+    MBcounter = byteIncrementer / (1024 * 1024)
+    console.log("===========================")
+    console.log('used existing upload');
+    console.log('id: ', multipart.uploadId);
+    console.log('starting Byte: ', byteIncrementer);
+    console.log('starting with MB completed: ', MBcounter);
+    console.log("===========================")
+};
+
+function createPartParams() {
+    var end = Math.min(byteIncrementer + partSize, buffer.length);
+
+    return partParams = {
+        accountId: '-',
+        uploadId: multipart.uploadId,
+        vaultName: params.vaultName,
+        range: 'bytes ' + byteIncrementer + '-' + (end-1) + '/*',
+        body: buffer.slice(byteIncrementer, end)
+    };
+}
+
+function recursivelseuploadParts(partParams) {
+    console.log('Uploading part', byteIncrementer, '=', partParams.range);
+    glacier.uploadMultipartPart(partParams, function(multiErr, mData) {
+        if (multiErr) {
+            console.log('part upload error: ', multiErr)
+            console.log('retrying')
+            return recursivelyUploadPart(byteIncrementer)
+        } else {
+            console.log("Completed part", this.request.params.range);
+            if (--numPartsLeft > 0) {
+                updateCounters();
+                return uploadPart();
+            } else {
+                completeUpload();
+            }
         }
     });
 };
