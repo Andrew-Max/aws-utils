@@ -38,7 +38,7 @@ var params = {
 
 var buffer = fs.readFileSync(filePath);
 var numPartsLeft = Math.ceil(buffer.length / partSize);
-var glacier = new AWS.Glacier(myConfig)
+var glacier = new AWS.Glacier(myConfig);
 var treeHash = glacier.computeChecksums(buffer).treeHash;
 
 new Promise(function (resolve, reject) {
@@ -52,7 +52,7 @@ new Promise(function (resolve, reject) {
     }
 }).then(function () {
     console.log("total upload size: ", buffer.length);
-    recursivelyUploadPart(byteIncrementer)
+    recursivelyUploadPart(byteIncrementer);
 }).catch(function (err) {console.log(err)});
 
 function startUploads(num) {
@@ -98,6 +98,7 @@ function completeUpload () {
 };
 
 function initiateNewUpload() {
+    var params = createPartParams();
     glacier.initiateMultipartUpload(params, function (mpErr, multi) {
         if (mpErr) { console.log('Error!', mpErr.stack); return; }
         console.log("===========================");
@@ -110,8 +111,8 @@ function initiateNewUpload() {
 
 function initializeForExistingUpload() {
     byteIncrementer = argv.lastByte;
-    multipart = { uploadId: argv.multi }
-    MBcounter = byteIncrementer / (1024 * 1024)
+    multipart = { uploadId: argv.multi };
+    MBcounter = byteIncrementer / (1024 * 1024);
     console.log("===========================")
     console.log('used existing upload');
     console.log('id: ', multipart.uploadId);
@@ -136,9 +137,9 @@ function recursivelseuploadParts(partParams) {
     console.log('Uploading part', byteIncrementer, '=', partParams.range);
     glacier.uploadMultipartPart(partParams, function(multiErr, mData) {
         if (multiErr) {
-            console.log('part upload error: ', multiErr)
-            console.log('retrying')
-            return recursivelyUploadPart(byteIncrementer)
+            console.log('part upload error: ', multiErr);
+            console.log('retrying');
+            return recursivelyUploadPart(byteIncrementer);
         } else {
             console.log("Completed part", this.request.params.range);
             if (--numPartsLeft > 0) {
