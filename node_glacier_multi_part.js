@@ -84,6 +84,9 @@ function recursivelyUploadPart() {
                         console.log('Completed upload in', delta, 'seconds');
                         console.log('Archive ID:', data.archiveId);
                         console.log('Checksum:  ', data.checksum);
+                        console.log("==============================");
+                        console.log('COMPLETED');
+                        console.log("==============================");
                     }
                 });
             }
