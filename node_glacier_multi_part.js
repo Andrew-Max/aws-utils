@@ -34,6 +34,7 @@ new Promise(function (resolve, reject) {
         resolve();
     });
 }).then(function () {
+    console.log("total upload size: ", buffer.length);
     recursivelyUploadPart(byteIncrementer)
 }).catch(function (err) {console.log(err)});
 
