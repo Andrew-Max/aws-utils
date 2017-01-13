@@ -47,17 +47,21 @@ new Promise(function (resolve, reject) {
         byteIncrementer = argv.lastByte;
         multipart = { uploadId: argv.multi }
         MBcounter = byteIncrementer / (1024 * 1024)
+        console.log("===========================")
         console.log('used existing upload');
         console.log('id: ', multipart.uploadId);
         console.log('starting Byte: ', byteIncrementer);
         console.log('starting with MB completed: ', MBcounter);
+        console.log("===========================")
 
         resolve();
     //if no existing upload info, start new one
     } else {
         glacier.initiateMultipartUpload(params, function (mpErr, multi) {
             if (mpErr) { console.log('Error!', mpErr.stack); return; }
-            console.log("Got upload ID", multi.uploadId);
+            console.log("===========================")
+            conole.log("Initiated new upload with id: ",  multi.uploadId);
+            console.log("===========================")
             multipart = multi
             resolve();
         });
