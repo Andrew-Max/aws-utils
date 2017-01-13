@@ -50,7 +50,7 @@ new Promise(function (resolve, reject) {
         console.log('used existing upload');
         console.log('id: ', multipart.uploadId);
         console.log('starting Byte: ', byteIncrementer);
-        console.log('starting MB: ', MBcounter);
+        console.log('starting with MB completed: ', MBcounter);
 
         resolve();
     //if no existing upload info, start new one
