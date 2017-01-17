@@ -57,11 +57,6 @@ new Promise(function (resolve, reject) {
     recursivelyUploadParts(byteIncrementer);
 }).catch(function (err) {console.log(err)});
 
-function uploadPart() {
-    var partParams = createPartParams();
-    uploadPart(partParams);
-};
-
 function updateCounters() {
     MBcounter++;
     byteIncrementer += partSize;
