@@ -37,7 +37,7 @@ var params = {
 };
 
 var buffer = fs.readFileSync(filePath);
-var numPartsLeft = Math.ceil(buffer.length / partSize);
+var numPartsLeft;
 var glacier = new AWS.Glacier(myConfig);
 var treeHash = glacier.computeChecksums(buffer).treeHash;
 
@@ -48,7 +48,7 @@ new Promise(function (resolve, reject) {
         resolve();
     //if no existing upload info, start new one
     } else {
-        initiateNewUpload();
+        initializeNewUpload();
     }
 }).then(function () {
     console.log("total upload size: ", buffer.length);
@@ -97,7 +97,8 @@ function completeUpload () {
     });
 };
 
-function initiateNewUpload() {
+function initializeNewUpload() {
+    numPartsLeft = Math.ceil(buffer.length / partSize);
     var params = createPartParams();
     glacier.initiateMultipartUpload(params, function (mpErr, multi) {
         if (mpErr) { console.log('Error!', mpErr.stack); return; }
@@ -110,6 +111,8 @@ function initiateNewUpload() {
 };
 
 function initializeForExistingUpload() {
+    var bytesRemaining = buffer.length - argv.lastByte ;
+    numPartsLeft = Math.ceil(bytesRemaining / partSize);
     byteIncrementer = argv.lastByte;
     multipart = { uploadId: argv.multi };
     MBcounter = byteIncrementer / (1024 * 1024);
