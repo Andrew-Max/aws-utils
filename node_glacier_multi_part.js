@@ -64,9 +64,10 @@ function uploadPart() {
 
 function updateCounters() {
     MBcounter++;
-    console.log("MB Uploaded: ", MBcounter);
     byteIncrementer += partSize;
-    console.log('recursing');
+    console.log("==============================");
+    console.log("MB Uploaded: ", MBcounter);
+    console.log("Parts Left: ", numPartsLeft);
 };
 
 function completeUpload () {
@@ -107,6 +108,7 @@ function initializeNewUpload() {
             if (mpErr) { console.log('Error!', mpErr.stack); return; }
             multipart = multi;
             console.log("===========================");
+            console.log("Total Parts in Upload: ", numPartsLeft)
             console.log("Initiated new upload with id: ",  multi.uploadId);
             console.log("multipart: ", multi);
             console.log("===========================");
@@ -126,6 +128,7 @@ function initializeForExistingUpload() {
     console.log('id: ', multipart.uploadId);
     console.log('starting Byte: ', byteIncrementer);
     console.log('starting with MB completed: ', MBcounter);
+    console.log("Total Parts in Upload: ", numPartsLeft);
     console.log("===========================")
 };
 
