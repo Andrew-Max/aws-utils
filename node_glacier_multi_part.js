@@ -29,12 +29,12 @@ var myConfig = new AWS.Config({
   secretAccessKey: creds.SecretAccessKey,
   region: 'us-west-1'
 });
-var params = {
-  accountId: '-',
-  vaultName: vaultName,
-  archiveDescription: archiveDescription,
-  partSize: partSize.toString(),
-};
+// var params = {
+//   accountId: '-',
+//   vaultName: vaultName,
+//   archiveDescription: archiveDescription,
+//   partSize: partSize.toString(),
+// };
 
 var buffer = fs.readFileSync(filePath);
 var numPartsLeft;
@@ -99,11 +99,16 @@ function completeUpload () {
 
 function initializeNewUpload() {
     numPartsLeft = Math.ceil(buffer.length / partSize);
-    var params = createPartParams();
+    var params = {
+      accountId: '-',
+      vaultName: vaultName,
+      archiveDescription: archiveDescription,
+      partSize: partSize.toString(),
+    };
     glacier.initiateMultipartUpload(params, function (mpErr, multi) {
         if (mpErr) { console.log('Error!', mpErr.stack); return; }
         console.log("===========================");
-        conole.log("Initiated new upload with id: ",  multi.uploadId);
+        console.log("Initiated new upload with id: ",  multi.uploadId);
         console.log("===========================");
         multipart = multi;
         resolve();
