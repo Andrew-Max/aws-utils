@@ -12,21 +12,14 @@ var myConfig = new AWS.Config({
   region: 'us-west-1'
 });
 
-var jobId = argv.id;
-
-if (!jobId) {
-    throw "ERROR: must pass an id via --id <id>"
-}
-
 var params = {
   accountId: '-',
   vaultName: vaultName,
-  uploadId: argv.id
 };
 
 var glacier = new AWS.Glacier(myConfig);
 
-glacier.abortMultipartUpload(params, function(err, data) {
+glacier.listMultipartUploads(params, function(err, data) {
   if (err) {
     console.log("failed")
     console.log(err, err.stack);
