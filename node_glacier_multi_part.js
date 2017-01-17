@@ -11,7 +11,6 @@ var byteIncrementer = 0;
 var MBcounter = 0;
 var multipart;
 
-//move these out to args
 var filePath = argv.filepath;
 var vaultName = argv.vaultname || 'amax-photo-storage';
 var archiveDescription = argv.description
@@ -29,12 +28,12 @@ var myConfig = new AWS.Config({
   secretAccessKey: creds.SecretAccessKey,
   region: 'us-west-1'
 });
-// var params = {
-//   accountId: '-',
-//   vaultName: vaultName,
-//   archiveDescription: archiveDescription,
-//   partSize: partSize.toString(),
-// };
+var params = {
+  accountId: '-',
+  vaultName: vaultName,
+  archiveDescription: archiveDescription,
+  partSize: partSize.toString(),
+};
 
 var buffer = fs.readFileSync(filePath);
 var numPartsLeft;
@@ -43,23 +42,20 @@ var treeHash = glacier.computeChecksums(buffer).treeHash;
 
 new Promise(function (resolve, reject) {
     //pass in upload id and byte starting place to resume a killed upload
+    // TODO: Need better names for restart
     if (argv.multi && argv.lastByte) {
         initializeForExistingUpload();
         resolve();
     //if no existing upload info, start new one
     } else {
-        initializeNewUpload();
+        initializeNewUpload().then(function () {
+            resolve();
+        });
     }
 }).then(function () {
     console.log("total upload size: ", buffer.length);
-    recursivelyUploadPart(byteIncrementer);
+    recursivelyUploadParts(byteIncrementer);
 }).catch(function (err) {console.log(err)});
-
-function startUploads(num) {
-    while (i < num) {
-        recursivelyUploadPart();
-    }
-};
 
 function uploadPart() {
     var partParams = createPartParams();
@@ -98,20 +94,24 @@ function completeUpload () {
 };
 
 function initializeNewUpload() {
-    numPartsLeft = Math.ceil(buffer.length / partSize);
-    var params = {
-      accountId: '-',
-      vaultName: vaultName,
-      archiveDescription: archiveDescription,
-      partSize: partSize.toString(),
-    };
-    glacier.initiateMultipartUpload(params, function (mpErr, multi) {
-        if (mpErr) { console.log('Error!', mpErr.stack); return; }
-        console.log("===========================");
-        console.log("Initiated new upload with id: ",  multi.uploadId);
-        console.log("===========================");
-        multipart = multi;
-        resolve();
+    return new Promise(function (resolve, reject) {
+        numPartsLeft = Math.ceil(buffer.length / partSize);
+        var params = {
+          accountId: '-',
+          vaultName: vaultName,
+          archiveDescription: archiveDescription,
+          partSize: partSize.toString(),
+        };
+
+        glacier.initiateMultipartUpload(params, function (mpErr, multi) {
+            if (mpErr) { console.log('Error!', mpErr.stack); return; }
+            multipart = multi;
+            console.log("===========================");
+            console.log("Initiated new upload with id: ",  multi.uploadId);
+            console.log("multipart: ", multi);
+            console.log("===========================");
+            resolve();
+        });
     });
 };
 
@@ -131,7 +131,6 @@ function initializeForExistingUpload() {
 
 function createPartParams() {
     var end = Math.min(byteIncrementer + partSize, buffer.length);
-
     return partParams = {
         accountId: '-',
         uploadId: multipart.uploadId,
@@ -141,18 +140,19 @@ function createPartParams() {
     };
 }
 
-function recursivelseuploadParts(partParams) {
+function recursivelyUploadParts() {
+    var partParams = createPartParams();
     console.log('Uploading part', byteIncrementer, '=', partParams.range);
     glacier.uploadMultipartPart(partParams, function(multiErr, mData) {
         if (multiErr) {
             console.log('part upload error: ', multiErr);
             console.log('retrying');
-            return recursivelyUploadPart(byteIncrementer);
+            return recursivelyUploadParts(byteIncrementer);
         } else {
             console.log("Completed part", this.request.params.range);
             if (--numPartsLeft > 0) {
                 updateCounters();
-                return uploadPart();
+                return recursivelyUploadParts();
             } else {
                 completeUpload();
             }
