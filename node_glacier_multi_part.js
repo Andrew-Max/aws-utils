@@ -37,13 +37,17 @@ var params = {
 };
 
 var buffer = fs.readFileSync(filePath);
-var numPartsLeft = Math.ceil(buffer.length / partSize);
+var numPartsLeft;
 var glacier = new AWS.Glacier(myConfig)
 var treeHash = glacier.computeChecksums(buffer).treeHash;
 
 new Promise(function (resolve, reject) {
     //pass in upload id and byte starting place to resume a killed upload
     if (argv.multi && argv.lastByte) {
+        // change to first byte
+        var bytesRemaining = buffer.length - argv.lastByte ;
+        numPartsLeft = Math.ceil(bytesRemaining / partSize);
+        console.log("numPartsLeft: ", numPartsLeft)
         byteIncrementer = argv.lastByte;
         multipart = { uploadId: argv.multi }
         MBcounter = byteIncrementer / (1024 * 1024)
@@ -57,6 +61,7 @@ new Promise(function (resolve, reject) {
         resolve();
     //if no existing upload info, start new one
     } else {
+        numPartsLeft = Math.ceil(buffer.length / partSize);
         glacier.initiateMultipartUpload(params, function (mpErr, multi) {
             if (mpErr) { console.log('Error!', mpErr.stack); return; }
             console.log("===========================")
@@ -67,14 +72,39 @@ new Promise(function (resolve, reject) {
         });
     }
 }).then(function () {
-    console.log("total upload size: ", buffer.length);
-    recursivelyUploadPart(byteIncrementer)
+    if(numPartsLeft > 0) {
+        console.log("total upload size: ", buffer.length);
+        recursivelyUploadPart(byteIncrementer)
+    } else {
+        console.log('download already finished: completing')
+        //copy paster of other complete code
+        var doneParams = {
+            vaultName: params.vaultName,
+            uploadId: multipart.uploadId,
+            archiveSize: buffer.length.toString(),
+            checksum: treeHash // the computed tree hash
+        };
+        console.log("Completing upload...");
+        glacier.completeMultipartUpload(doneParams, function(err, data) {
+            if (err) {
+                console.log("An error occurred while uploading the archive: ", err);
+            } else {
+                var delta = (new Date() - startTime) / 1000;
+                console.log('Completed upload in', delta, 'seconds');
+                console.log('Archive ID:', data.archiveId);
+                console.log('Checksum:  ', data.checksum);
+                console.log("==============================");
+                console.log('COMPLETED');
+                console.log("==============================");
+            }
+        });
+        //copy paster of other complete code
+    }
 
 }).catch(function (err) {console.log(err)});
 
 function recursivelyUploadPart() {
     var end = Math.min(byteIncrementer + partSize, buffer.length);
-
     var partParams = {
         accountId: '-',
         uploadId: multipart.uploadId,
